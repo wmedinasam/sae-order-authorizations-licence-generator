@@ -20,6 +20,7 @@ public static class Program
                 "inspect" => Comandos.Inspect(a),
                 "verify" => Comandos.Verify(a),
                 "list" => Comandos.List(a),
+                "appsecret-export" => Comandos.AppSecretExport(a),
                 _ => Uso(),
             };
         }
@@ -57,6 +58,7 @@ public static class Program
             wis-license inspect <archivo.lic> --keys <dir> --installation-id <guid>
             wis-license verify  <archivo.lic> --keys <dir> --installation-id <guid>
             wis-license list    --ledger <archivo>
+            wis-license appsecret-export --keys <dir>   # imprime el appSecret en base64 (stdout)
             """);
         return ErrorEntrada;
     }

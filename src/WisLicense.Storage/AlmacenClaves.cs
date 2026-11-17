@@ -79,6 +79,20 @@ public static class AlmacenClaves
         return DescifrarAppSecret(bytes, contrasena);
     }
 
+    /// <summary>appSecret en base64 para la app (dotnet user-secrets "Licencia:AppSecret"). Limpia el buffer en claro.</summary>
+    public static string ExportarAppSecretBase64(string directorio, string contrasena)
+    {
+        var secreto = CargarAppSecret(directorio, contrasena);
+        try
+        {
+            return Convert.ToBase64String(secreto);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(secreto);
+        }
+    }
+
     // Formato del archivo: salt(16) | nonce(12) | tag(16) | ciphertext(32), todo en base64.
     private static byte[] CifrarAppSecret(byte[] appSecret, string contrasena)
     {
