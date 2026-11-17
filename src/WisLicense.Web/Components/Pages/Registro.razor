@@ -1,0 +1,64 @@
+@page "/registro"
+@using WisLicense.Storage
+@using WisLicense.Web.Services
+@inject LicenciasService Licencias
+
+<PageTitle>Registro · Licencias</PageTitle>
+
+<section class="app-page app-page--ancho">
+    <h1 class="wis-h2">Registro de emisiones</h1>
+    <p class="app-page__intro">@emisiones.Count emisiones registradas en <span class="app-codigo">@Licencias.RutaLedger</span>. Solo lectura.</p>
+
+    <div class="app-filtro">
+        <label class="wis-field-label" for="filtro">Buscar por cliente</label>
+        <input id="filtro" class="wis-input" @bind="filtro" @bind:event="oninput" placeholder="Nombre del cliente" />
+    </div>
+
+    @if (filtradas.Count == 0)
+    {
+        <p class="app-aviso">@(emisiones.Count == 0 ? "Todavía no hay licencias emitidas desde esta instalación." : "Ningún cliente coincide con la búsqueda.")</p>
+    }
+    else
+    {
+        <div class="app-tabla-wrap">
+            <table class="app-tabla">
+                <thead>
+                    <tr>
+                        <th scope="col">Emitida</th>
+                        <th scope="col">Cliente</th>
+                        <th scope="col">Plan</th>
+                        <th scope="col">Serial</th>
+                        <th scope="col">Válida hasta</th>
+                        <th scope="col">licenseId</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in filtradas)
+                    {
+                        <tr>
+                            <td>@e.Emitida.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@e.Cliente</td>
+                            <td>@e.Plan</td>
+                            <td>@e.Serial</td>
+                            <td>@(e.ValidTo?.ToString("yyyy-MM-dd") ?? "Sin caducidad")</td>
+                            <td class="app-codigo">@e.LicenseId</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<EntradaLedger> emisiones = [];
+    private string filtro = "";
+
+    protected override void OnInitialized() => emisiones = Licencias.Registro();
+
+    private List<EntradaLedger> filtradas =>
+        emisiones
+            .Where(e => string.IsNullOrWhiteSpace(filtro) || e.Cliente.Contains(filtro.Trim(), StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(e => e.Emitida)
+            .ToList();
+}

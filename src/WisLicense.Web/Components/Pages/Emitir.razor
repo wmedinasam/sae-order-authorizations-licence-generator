@@ -1,0 +1,174 @@
+@page "/"
+@page "/emitir"
+@using WisLicense.Core
+@using WisLicense.Storage
+@using WisLicense.Web.Services
+@inject LicenciasService Licencias
+@inject IJSRuntime JS
+
+<PageTitle>Emitir licencia · Licencias</PageTitle>
+
+<section class="app-page">
+    <h1 class="wis-h2">Emitir licencia</h1>
+    <p class="app-page__intro">Firma un .lic para una instalación. La contraseña se usa solo para esta emisión y no se guarda.</p>
+
+    <form class="wis-card app-form" @onsubmit="EmitirAsync" @onsubmit:preventDefault>
+        <div class="app-campo app-campo--ancho">
+            <label class="wis-field-label" for="cliente">Cliente</label>
+            <input id="cliente" class="wis-input" @bind="cliente" required />
+        </div>
+
+        <div class="app-campo app-campo--ancho">
+            <label class="wis-field-label" for="iid">ID de instalación</label>
+            <input id="iid" class="wis-input app-codigo" @bind="installationId" placeholder="00000000-0000-0000-0000-000000000000" required />
+            <span class="app-ayuda">Lo envía el cliente desde su página Licencia.</span>
+        </div>
+
+        <div class="app-campo">
+            <label class="wis-field-label" for="plan">Plan</label>
+            <select id="plan" class="wis-input" @bind="plan">
+                <option value="mensual">Mensual</option>
+                <option value="anual">Anual</option>
+                <option value="lifetime">Lifetime</option>
+            </select>
+        </div>
+
+        <div class="app-campo">
+            <label class="wis-field-label" for="edicion">Edición</label>
+            <select id="edicion" class="wis-input" @bind="edicion">
+                <option value="basica">Básica</option>
+                <option value="pro">Pro</option>
+                <option value="enterprise">Enterprise</option>
+            </select>
+        </div>
+
+        <div class="app-campo">
+            <label class="wis-field-label" for="empresas">Empresas máximas</label>
+            <input id="empresas" class="wis-input" type="number" min="1" @bind="maxEmpresas" />
+        </div>
+
+        <div class="app-campo">
+            <label class="wis-field-label" for="usuarios">Usuarios máximos</label>
+            <input id="usuarios" class="wis-input" type="number" min="1" @bind="maxUsuarios" />
+        </div>
+
+        <div class="app-campo">
+            <label class="wis-field-label" for="desde">Válida desde (UTC)</label>
+            <input id="desde" class="wis-input" type="date" @bind="desde" />
+        </div>
+
+        @if (plan != "lifetime")
+        {
+            <div class="app-campo">
+                <label class="wis-field-label" for="meses">Duración en meses</label>
+                <input id="meses" class="wis-input" type="number" min="1" @bind="meses" />
+                <span class="app-ayuda">Anual: 12 meses.</span>
+            </div>
+
+            <div class="app-campo">
+                <label class="wis-field-label" for="gracia">Días de gracia</label>
+                <input id="gracia" class="wis-input" type="number" min="0" @bind="graceDays" />
+            </div>
+        }
+
+        <div class="app-campo">
+            <label class="wis-field-label" for="version">Versión mayor máxima</label>
+            <input id="version" class="wis-input" type="number" min="1" @bind="maxVersionMayor" />
+            <span class="app-ayuda">@(plan == "lifetime" ? "Obligatoria en lifetime: la licencia cubre hasta esta versión mayor." : "Opcional. Vacío = sin tope.")</span>
+        </div>
+
+        <div class="app-campo app-campo--ancho">
+            <label class="wis-field-label" for="renovar">Renovar licencia (opcional)</label>
+            <input id="renovar" class="wis-input app-codigo" @bind="renovarId" placeholder="Vacío = licencia nueva" />
+            <span class="app-ayuda">Usa el licenseId de una licencia ya emitida; el serial sube automáticamente.</span>
+        </div>
+
+        <div class="app-campo app-campo--ancho">
+            <label class="wis-field-label" for="contrasena">Contraseña de las claves</label>
+            <input id="contrasena" class="wis-input" type="password" autocomplete="off" @bind="contrasena" required />
+            <span class="app-ayuda">Claves en <span class="app-codigo">@Licencias.DirectorioClaves</span>.</span>
+        </div>
+
+        <div class="app-acciones">
+            <button class="wis-button" type="submit" disabled="@enCurso">Emitir y descargar .lic</button>
+        </div>
+    </form>
+
+    @if (error is not null)
+    {
+        <p class="app-aviso" role="alert">@error</p>
+    }
+
+    @if (emitida is not null)
+    {
+        <p class="app-aviso app-aviso--ok" role="status">@emitida</p>
+    }
+</section>
+
+@code {
+    private string cliente = "";
+    private string installationId = "";
+    private string plan = "mensual";
+    private string edicion = "pro";
+    private int maxEmpresas = 1;
+    private int maxUsuarios = 1;
+    private DateTime desde = DateTime.UtcNow.Date;
+    private int? meses = 1;
+    private int? graceDays = Emisor.GraceDaysPorDefecto;
+    private int? maxVersionMayor;
+    private string renovarId = "";
+    private string contrasena = "";
+
+    private bool enCurso;
+    private string? error;
+    private string? emitida;
+
+    private async Task EmitirAsync()
+    {
+        error = null;
+        emitida = null;
+
+        if (!Guid.TryParse(installationId, out var iid)) { error = "El ID de instalación no es un GUID válido."; return; }
+        Guid? licenseId = null;
+        if (!string.IsNullOrWhiteSpace(renovarId))
+        {
+            if (!Guid.TryParse(renovarId, out var renovar)) { error = "El licenseId a renovar no es un GUID válido."; return; }
+            licenseId = renovar;
+        }
+
+        var solicitud = new SolicitudEmision(
+            Cliente: cliente.Trim(),
+            InstallationId: iid,
+            Plan: plan,
+            Edicion: edicion,
+            MaxEmpresas: maxEmpresas,
+            MaxUsuarios: maxUsuarios,
+            Desde: DateTime.SpecifyKind(desde.Date, DateTimeKind.Utc),
+            Meses: plan == "lifetime" ? null : meses,
+            GraceDays: plan == "lifetime" ? 0 : graceDays,
+            MaxVersionMayor: maxVersionMayor,
+            LicenseId: licenseId);
+
+        enCurso = true;
+        try
+        {
+            var (lic, payload) = Licencias.Emitir(solicitud, contrasena);
+            var nombre = $"licencia-{payload.Serial}-{payload.LicenseId:N}.lic";
+            await JS.InvokeVoidAsync("WISLicense.descargar", nombre, Convert.ToBase64String(lic));
+            emitida = $"Licencia emitida: {payload.Cliente}, plan {payload.Plan}, serial {payload.Serial}.";
+        }
+        catch (LicenciaException e)
+        {
+            error = e.Codigo == CodigoError.Validacion ? e.Message : $"Error de cripto o archivo: {e.Message}";
+        }
+        catch (Exception e) when (e is IOException or System.Security.Cryptography.CryptographicException or UnauthorizedAccessException)
+        {
+            error = $"Error de cripto o archivo: {e.Message}";
+        }
+        finally
+        {
+            enCurso = false;
+            contrasena = "";
+        }
+    }
+}

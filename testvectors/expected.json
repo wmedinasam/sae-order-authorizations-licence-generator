@@ -1,0 +1,27 @@
+{
+  "_nota": "TEST ONLY. public.pem y appsecret.b64 son de prueba: nunca usarlos en producción.",
+  "installationId": "7d2c8f4e-1a3b-4c5d-9e6f-0a1b2c3d4e5f",
+  "evaluadoEn": "2026-11-20T00:00:00Z",
+  "casos": [
+    {
+      "archivo": "valid_mensual.lic",
+      "resultado": "Vigente",
+      "cliente": "Cliente Vector Mensual",
+      "plan": "mensual",
+      "serial": 1,
+      "validTo": "2026-12-01T00:00:00Z"
+    },
+    {
+      "archivo": "valid_lifetime.lic",
+      "resultado": "Vigente",
+      "cliente": "Cliente Vector Lifetime",
+      "plan": "lifetime",
+      "serial": 1,
+      "validTo": null
+    },
+    {
+      "archivo": "altered.lic",
+      "resultado": "FirmaInvalida"
+    }
+  ]
+}

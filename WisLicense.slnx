@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WisLicense.Cli/WisLicense.Cli.csproj" />
+    <Project Path="src/WisLicense.Core/WisLicense.Core.csproj" />
+    <Project Path="src/WisLicense.Storage/WisLicense.Storage.csproj" />
+    <Project Path="src/WisLicense.Web/WisLicense.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WisLicense.Tests/WisLicense.Tests.csproj" />
+  </Folder>
+</Solution>

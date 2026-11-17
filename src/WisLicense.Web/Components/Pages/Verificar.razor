@@ -1,0 +1,125 @@
+@page "/verificar"
+@using WisLicense.Core
+@using WisLicense.Web.Services
+@inject LicenciasService Licencias
+
+<PageTitle>Verificar licencia · Licencias</PageTitle>
+
+<section class="app-page">
+    <h1 class="wis-h2">Verificar licencia</h1>
+    <p class="app-page__intro">Comprueba la firma, la instalación y la vigencia de un .lic. No modifica nada.</p>
+
+    <form class="wis-card app-form" @onsubmit="VerificarAsync" @onsubmit:preventDefault>
+        <div class="app-campo app-campo--ancho">
+            <label class="wis-field-label" for="archivo">Archivo .lic</label>
+            <InputFile id="archivo" class="wis-input" accept=".lic" OnChange="AlSeleccionar" />
+            <span class="app-ayuda">@(archivo is null ? "Ningún archivo seleccionado." : $"{archivo.Name}, {archivo.Size} bytes.")</span>
+        </div>
+
+        <div class="app-campo app-campo--ancho">
+            <label class="wis-field-label" for="iid">ID de instalación</label>
+            <input id="iid" class="wis-input app-codigo" @bind="installationId" placeholder="00000000-0000-0000-0000-000000000000" required />
+        </div>
+
+        <div class="app-campo app-campo--ancho">
+            <label class="wis-field-label" for="contrasena">Contraseña de las claves</label>
+            <input id="contrasena" class="wis-input" type="password" autocomplete="off" @bind="contrasena" required />
+        </div>
+
+        <div class="app-acciones">
+            <button class="wis-button" type="submit" disabled="@enCurso">Verificar licencia</button>
+        </div>
+    </form>
+
+    @if (error is not null)
+    {
+        <p class="app-aviso" role="alert">@error</p>
+    }
+
+    @if (resultado is { } r)
+    {
+        <div class="app-resultado">
+            <p class="app-aviso @(r.Estado == EstadoVigencia.Expirada ? "" : "app-aviso--ok")" role="status">
+                Firma válida. Estado: <strong>@EtiquetaEstado(r.Estado)</strong>.
+            </p>
+
+            <dl class="wis-card app-datos">
+                <dt>Cliente</dt><dd>@r.Payload.Cliente</dd>
+                <dt>licenseId</dt><dd class="app-codigo">@r.Payload.LicenseId</dd>
+                <dt>Serial</dt><dd>@r.Payload.Serial</dd>
+                <dt>Plan</dt><dd>@r.Payload.Plan</dd>
+                <dt>Edición</dt><dd>@r.Payload.Edicion</dd>
+                <dt>Empresas / usuarios</dt><dd>@r.Payload.MaxEmpresas / @r.Payload.MaxUsuarios</dd>
+                <dt>Emitida</dt><dd>@r.Payload.Emitida.ToString("yyyy-MM-dd HH:mm") UTC</dd>
+                <dt>Válida desde</dt><dd>@r.Payload.ValidFrom.ToString("yyyy-MM-dd") UTC</dd>
+                <dt>Válida hasta</dt><dd>@(r.Payload.ValidTo?.ToString("yyyy-MM-dd") ?? "Sin caducidad")</dd>
+                <dt>Días de gracia</dt><dd>@r.Payload.GraceDays</dd>
+                <dt>Versión mayor máx.</dt><dd>@(r.Payload.MaxVersionMayor?.ToString() ?? "Sin tope")</dd>
+            </dl>
+        </div>
+    }
+</section>
+
+@code {
+    private IBrowserFile? archivo;
+    private string installationId = "";
+    private string contrasena = "";
+    private bool enCurso;
+    private string? error;
+    private (LicenciaPayload Payload, EstadoVigencia Estado)? resultado;
+
+    private const long TamanoMaximo = 64 * 1024;
+
+    private void AlSeleccionar(InputFileChangeEventArgs e)
+    {
+        archivo = e.File;
+        resultado = null;
+        error = null;
+    }
+
+    private async Task VerificarAsync()
+    {
+        resultado = null;
+        error = null;
+
+        if (archivo is null) { error = "Selecciona un archivo .lic."; return; }
+        if (archivo.Size > TamanoMaximo) { error = "El archivo supera 64 KB: no es un .lic válido."; return; }
+        if (!Guid.TryParse(installationId, out var iid)) { error = "El ID de instalación no es un GUID válido."; return; }
+
+        enCurso = true;
+        try
+        {
+            using var ms = new MemoryStream();
+            await archivo.OpenReadStream(TamanoMaximo).CopyToAsync(ms);
+            resultado = Licencias.Verificar(ms.ToArray(), iid, contrasena);
+        }
+        catch (LicenciaException e)
+        {
+            error = Mensaje(e);
+        }
+        catch (Exception e) when (e is IOException or System.Security.Cryptography.CryptographicException or UnauthorizedAccessException)
+        {
+            error = $"Error de cripto o archivo: {e.Message}";
+        }
+        finally
+        {
+            enCurso = false;
+            contrasena = "";
+        }
+    }
+
+    private static string Mensaje(LicenciaException e) => e.Codigo switch
+    {
+        CodigoError.FirmaInvalida => "La firma no coincide: el archivo fue alterado o se emitió con otras claves.",
+        CodigoError.InstalacionDistinta => "La licencia pertenece a otra instalación.",
+        CodigoError.FormatoInvalido => "El archivo no es un .lic válido.",
+        _ => e.Message,
+    };
+
+    private static string EtiquetaEstado(EstadoVigencia e) => e switch
+    {
+        EstadoVigencia.Vigente => "vigente",
+        EstadoVigencia.EnGracia => "en periodo de gracia",
+        _ => "expirada",
+    };
+}

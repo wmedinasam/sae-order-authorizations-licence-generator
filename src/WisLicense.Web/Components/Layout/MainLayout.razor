@@ -1,0 +1,55 @@
+﻿@inherits LayoutComponentBase
+@inject IJSRuntime JS
+
+<div class="app-shell">
+    <header class="app-header">
+        <a href="/emitir" class="app-logo" aria-label="WIS Dev Code, inicio de licencias">
+            <span class="wis-logo" aria-hidden="true">
+                <img class="wis-logo__on-light" src="brand/logos/svg/wis-logo-horizontal-on-light.svg" alt="" width="220" height="66" />
+                <img class="wis-logo__on-dark" src="brand/logos/svg/wis-logo-horizontal-on-dark.svg" alt="" width="220" height="66" />
+            </span>
+        </a>
+        <span class="app-header__titulo">Emisión de licencias</span>
+
+        <label class="app-header__tema">
+            <span>Tema</span>
+            <select class="wis-input" @bind="tema" @bind:after="AplicarTema">
+                <option value="auto">Sistema</option>
+                <option value="light">Claro</option>
+                <option value="dark">Oscuro</option>
+            </select>
+        </label>
+    </header>
+
+    <div class="app-body">
+        <nav class="app-nav" aria-label="Principal">
+            <NavLink class="app-nav__enlace" href="/emitir">Emitir</NavLink>
+            <NavLink class="app-nav__enlace" href="/verificar">Verificar</NavLink>
+            <NavLink class="app-nav__enlace" href="/registro">Registro</NavLink>
+            <NavLink class="app-nav__enlace" href="/claves">Claves</NavLink>
+        </nav>
+
+        <main class="app-main">
+            @Body
+        </main>
+    </div>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Ha ocurrido un error inesperado.
+    <a href="." class="reload">Recargar</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private string tema = "auto";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        tema = await JS.InvokeAsync<string>("WISLicense.tema");
+        StateHasChanged();
+    }
+
+    private Task AplicarTema() => JS.InvokeVoidAsync("WISLicense.fijarTema", tema).AsTask();
+}

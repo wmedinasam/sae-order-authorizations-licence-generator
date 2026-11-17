@@ -1,0 +1,23 @@
+# Claves y licencias emitidas: nunca al repo
+*.pem
+appsecret*
+*.lic
+keys/
+licenses-issued.jsonl
+
+# Vectores de prueba (TEST ONLY): se versionan a propósito
+!testvectors/public.pem
+!testvectors/appsecret.b64
+!testvectors/*.lic
+
+# .NET
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+TestResults/
+
+# Herramientas de captura local (no se versionan)
+.playwright-mcp/

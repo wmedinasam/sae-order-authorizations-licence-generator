@@ -1,0 +1,88 @@
+@page "/claves"
+@using WisLicense.Core
+@using WisLicense.Storage
+@using WisLicense.Web.Services
+@inject LicenciasService Licencias
+
+<PageTitle>Claves · Licencias</PageTitle>
+
+<section class="app-page">
+    <h1 class="wis-h2">Claves del emisor</h1>
+    <p class="app-page__intro">Directorio: <span class="app-codigo">@Path.GetFullPath(Licencias.DirectorioClaves)</span></p>
+
+    <dl class="wis-card app-datos">
+        <dt>private.pem</dt><dd>@Marca(estado.Privada)</dd>
+        <dt>public.pem</dt><dd>@Marca(estado.Publica)</dd>
+        <dt>appsecret.b64</dt><dd>@Marca(estado.AppSecret)</dd>
+    </dl>
+
+    <p class="app-aviso">Respalda <strong>private.pem</strong> y su contraseña fuera de este equipo. Sin ellos no se pueden emitir licencias compatibles con las ya entregadas.</p>
+
+    @if (estado.Completo)
+    {
+        <p class="app-aviso app-aviso--ok" role="status">Claves listas para emitir.</p>
+    }
+    else if (estado.Ninguna)
+    {
+        <form class="wis-card app-form" @onsubmit="Generar" @onsubmit:preventDefault>
+            <div class="app-campo app-campo--ancho">
+                <label class="wis-field-label" for="contrasena">Contraseña nueva</label>
+                <input id="contrasena" class="wis-input" type="password" autocomplete="new-password" @bind="contrasena" required />
+                <span class="app-ayuda">Mínimo 12 caracteres. Protege private.pem y appsecret.b64.</span>
+            </div>
+            <div class="app-campo app-campo--ancho">
+                <label class="wis-field-label" for="repite">Repite la contraseña</label>
+                <input id="repite" class="wis-input" type="password" autocomplete="new-password" @bind="repite" required />
+            </div>
+            <div class="app-acciones">
+                <button class="wis-button" type="submit">Generar claves</button>
+            </div>
+        </form>
+    }
+    else
+    {
+        <p class="app-aviso" role="alert">Faltan archivos de claves. La generación se niega a sobrescribir: revisa el directorio antes de continuar.</p>
+    }
+
+    @if (error is not null)
+    {
+        <p class="app-aviso" role="alert">@error</p>
+    }
+</section>
+
+@code {
+    private EstadoClaves estado = null!;
+    private string contrasena = "";
+    private string repite = "";
+    private string? error;
+
+    protected override void OnInitialized() => estado = Licencias.Estado();
+
+    private static string Marca(bool presente) => presente ? "Presente" : "Falta";
+
+    private void Generar()
+    {
+        error = null;
+        if (contrasena.Length < 12) { error = "La contraseña debe tener al menos 12 caracteres."; return; }
+        if (contrasena != repite) { error = "Las contraseñas no coinciden."; return; }
+
+        try
+        {
+            Licencias.GenerarClaves(contrasena);
+            estado = Licencias.Estado();
+        }
+        catch (LicenciaException e)
+        {
+            error = e.Message;
+        }
+        catch (Exception e) when (e is IOException or System.Security.Cryptography.CryptographicException or UnauthorizedAccessException)
+        {
+            error = $"Error de cripto o archivo: {e.Message}";
+        }
+        finally
+        {
+            contrasena = "";
+            repite = "";
+        }
+    }
+}

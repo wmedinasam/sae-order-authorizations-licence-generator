@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html>
+<html lang="es" data-theme="auto">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F6F8FB" data-wis-theme-color />
+    <meta name="robots" content="noindex, nofollow" />
+    <base href="/" />
+    <title>Licencias · WIS Dev Code</title>
+    <link rel="icon" href="brand/web-icons/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="brand/web-icons/apple-touch-icon.png" />
+    <script src="brand/web/theme-init.js"></script>
+    <link rel="stylesheet" href="brand/web/brand-tokens.css" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["WisLicense.Web.styles.css"]" />
+    <ImportMap />
+    <HeadOutlet />
+</head>
+
+<body class="wis-brand">
+    <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <ReconnectModal />
+    <script src="js/app.js"></script>
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+
+</html>
