@@ -59,6 +59,15 @@ public static class Comandos
         return 0;
     }
 
+    // Solo el base64 va a stdout, para encadenarlo con user-secrets sin dejar el secreto en un archivo.
+    public static int AppSecretExport(Argumentos a)
+    {
+        var dir = a.Requerida("keys");
+        Console.Out.Write(AlmacenClaves.ExportarAppSecretBase64(dir, Contrasena()));
+        Console.Error.WriteLine("appSecret exportado a stdout. No lo guardes en archivos del repo.");
+        return 0;
+    }
+
     public static int List(Argumentos a)
     {
         var entradas = Ledger.Leer(a.Requerida("ledger"));
