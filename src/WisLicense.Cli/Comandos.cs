@@ -116,7 +116,8 @@ public static class Comandos
 
     private static string LeerOculta(string prompt)
     {
-        Console.Write(prompt);
+        // Prompt y salto de línea a stderr: stdout puede estar capturado por un comando que espera solo el resultado.
+        Console.Error.Write(prompt);
         var buffer = new List<char>();
         while (true)
         {
@@ -125,7 +126,7 @@ public static class Comandos
             if (k.Key == ConsoleKey.Backspace && buffer.Count > 0) buffer.RemoveAt(buffer.Count - 1);
             else if (!char.IsControl(k.KeyChar)) buffer.Add(k.KeyChar);
         }
-        Console.WriteLine();
+        Console.Error.WriteLine();
         return new string(buffer.ToArray());
     }
 }
